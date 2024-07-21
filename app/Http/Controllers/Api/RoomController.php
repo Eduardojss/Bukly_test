@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Room;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class RoomController extends Controller
@@ -15,9 +16,8 @@ class RoomController extends Controller
      */
     public function index(Request $request)
     {
-        $perPage = $request->query('per_page', 10);
-
-        $rooms = Room::paginate($perPage);
+        $perPage = $request->query('per_page', 12);
+        $rooms = Room::with('hotel')->where('active', 1)->paginate($perPage);
 
         return response()->json([
             'message' => 'ok',
@@ -29,7 +29,7 @@ class RoomController extends Controller
                 'total' => $rooms->total(),
                 'nextPage' => $rooms->nextPageUrl()
             ]
-        ]);  
+        ]);
     }
 
     /**
@@ -50,7 +50,9 @@ class RoomController extends Controller
             'description' => 'required|sometimes',
         ]);
 
-        try{
+        $validatedData['hotel_id'] = $hotel_id;
+
+        try {
             DB::beginTransaction();
             $room = Room::create($validatedData);
             DB::commit();
@@ -59,7 +61,7 @@ class RoomController extends Controller
                 'message' => 'ok',
                 'data' => $room
             ]);
-        }catch(Exception $e){
+        } catch (Exception $e) {
             DB::rollBack();
             return response()->json([
                 'message' => 'An error occoured trying to save the room data',
@@ -77,15 +79,15 @@ class RoomController extends Controller
                 'message' => 'Please insert a valid identifier for a room'
             ], 400);
         }
-
-        try{
-            $room = Room::find($id);
+        $user = Auth::user();
+        try {
+            $room = Room::join('hotels', 'rooms.hotel_id', '=', 'hotels.id')->where('active', 1)->where('hotels.user_id', $user->id)->first($id);
 
             return response()->json([
                 'message' => 'ok',
                 'data' => $room
             ]);
-        }catch(Exception $e){
+        } catch (Exception $e) {
             DB::rollBack();
             return response()->json([
                 'message' => 'An error occoured trying to search for room data',
@@ -106,7 +108,7 @@ class RoomController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        if(!$id){
+        if (!$id) {
             return response()->json([
                 'message' => 'Please insert a valid identifier for rooms'
             ], 400);
@@ -119,7 +121,7 @@ class RoomController extends Controller
 
         try {
             DB::beginTransaction();
-            $room = Room::find($id);
+            $room = Room::where('active', 1)->first($id);
             $room->update($validatedData);
             $room->save();
             DB::commit();
@@ -147,10 +149,13 @@ class RoomController extends Controller
             ], 400);
         }
 
+        $user = Auth::user();
+
         try {
-            $room = Room::where('id', $id)->first();
-            $room->delete();
-            $room->save();
+            DB::beginTransaction();
+            $room = Room::join('hotels', 'rooms.hotel_id', '=', 'hotels.id')->where('hotels.user_id', $user->id)->where('rooms.id', $id)->first();
+            $room->update(['active' => 0]);
+            DB::commit();
             return response()->json([
                 'message' => 'Sucessfully deleted',
             ]);

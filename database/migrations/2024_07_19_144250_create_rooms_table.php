@@ -17,6 +17,7 @@ return new class extends Migration
             $table->text('description');
             $table->uuid('hotel_id');
             $table->foreign('hotel_id')->references('id')->on('hotels')->onDelete('cascade');
+            $table->boolean('active')->default(1);
             $table->timestamps();
             $table->softDeletes();
         });

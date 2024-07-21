@@ -12,4 +12,14 @@ class HotelController extends Controller
         $hotels = Hotel::all();
         return inertia('Home', compact('hotels'));
     }
+
+    public function create()
+    {
+        return inertia('Hotels/Create');
+    }
+
+    public function edit()
+    {
+        return inertia('Hotels/Edit');
+    }
 }

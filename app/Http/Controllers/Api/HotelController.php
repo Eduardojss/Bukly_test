@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Hotel;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class HotelController extends Controller
@@ -29,7 +30,7 @@ class HotelController extends Controller
                 'total' => $hotels->total(),
                 'nextPage' => $hotels->nextPageUrl()
             ]
-        ]);        
+        ]);
     }
 
     /**
@@ -47,14 +48,18 @@ class HotelController extends Controller
     {
         $validatedData = $request->validate([
             'name' => 'required|string|unique:hotels,name',
-            'address' => 'required|text',
+            'address' => 'required',
             'city' => 'required|string',
             'state' => 'required|string',
             'zip_code' => 'required|string',
-            'website' => 'required|sometimes|text'
+            'website' => 'required|sometimes'
         ]);
 
-        try{
+        $user = Auth::user();
+
+        $validatedData['user_id'] = $user->id;
+
+        try {
             DB::beginTransaction();
             $hotel = Hotel::create($validatedData);
             DB::commit();
@@ -63,10 +68,10 @@ class HotelController extends Controller
                 'message' => 'ok',
                 'data' => $hotel
             ], 200);
-        }catch(Exception $e){
+        } catch (Exception $e) {
             DB::rollBack();
             return response()->json([
-                'message' => 'An error occoured trying to save the hotel data',
+                'message' => 'An error occoured trying to save the hotel data,' . $e->getMessage(),
             ], 500);
         }
     }
@@ -82,14 +87,14 @@ class HotelController extends Controller
             ], 400);
         }
 
-        try{
+        try {
             $hotel = Hotel::where('id', $id)->first();
 
             return response()->json([
                 'message' => 'ok',
                 'data' => $hotel
             ]);
-        }catch(Exception $e){
+        } catch (Exception $e) {
             return response()->json([
                 'message' => 'An error occoured trying to search for hotel data',
             ], 500);
@@ -109,7 +114,7 @@ class HotelController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        if(!$id){
+        if (!$id) {
             return response()->json([
                 'message' => 'Please insert a valid identifier for hotels'
             ], 400);
@@ -117,16 +122,18 @@ class HotelController extends Controller
 
         $validatedData = $request->validate([
             'name' => 'required|sometimes|string|unique:hotels,name',
-            'address' => 'required|sometimes|text',
+            'address' => 'required|sometimes',
             'city' => 'required|sometimes|string',
             'state' => 'required|sometimes|string',
             'zip_code' => 'required|sometimes|string',
-            'website' => 'required|sometimes|text'
+            'website' => 'required|sometimes'
         ]);
+
+        $user = Auth::user();
 
         try {
             DB::beginTransaction();
-            $hotel = Hotel::find($id);
+            $hotel = Hotel::where('user_id', $user->id)->where('id', $id)->first();
             $hotel->update($validatedData);
             $hotel->save();
             DB::commit();
@@ -138,7 +145,7 @@ class HotelController extends Controller
         } catch (Exception $e) {
             DB::rollBack();
             return response()->json([
-                'message' => 'An error occoured trying to save the hotel data',
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
@@ -154,8 +161,10 @@ class HotelController extends Controller
             ], 400);
         }
 
+        $user = Auth::user();
+
         try {
-            $hotel = Hotel::where('id', $id)->first();
+            $hotel = Hotel::where('user_id', $user->id)->where('id', $id)->first();
             $hotel->delete();
             $hotel->save();
             return response()->json([

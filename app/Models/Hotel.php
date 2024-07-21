@@ -12,7 +12,7 @@ class Hotel extends Model
     use HasFactory, SoftDeletes, HasUuids;
 
     public $table = 'hotels';
-    
+
     public $primaryKey = 'id';
 
     protected $fillable = [
@@ -21,10 +21,17 @@ class Hotel extends Model
         'city',
         'state',
         'zip_code',
-        'website'
+        'website',
+        'user_id'
     ];
 
-    public function Room(){
+    public function Room()
+    {
         return $this->hasMany(Room::class, 'hotel_id', 'id');
+    }
+
+    public function User()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
     }
 }
