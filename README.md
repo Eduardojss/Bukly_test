@@ -1,6 +1,6 @@
 # Bukly_test
 
-Este é um guia básico para executar um projeto Laravel usando Docker Compose.
+Este é um guia básico para executar um projeto Laravel usando Sail.
 
 ## Pré-requisitos
 
